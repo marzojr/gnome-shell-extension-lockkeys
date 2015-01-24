@@ -34,7 +34,23 @@ msgid "Caps-Lock Only"
 msgstr ""
 
 #: prefs.js:29
-msgid "Both"
+msgid "Scroll-Lock Only"
+msgstr ""
+
+#: prefs.js:29
+msgid "Num-Lock and Caps-Lock"
+msgstr ""
+
+#: prefs.js:29
+msgid "Caps-Lock and Scroll-Lock"
+msgstr ""
+
+#: prefs.js:29
+msgid "Num-Lock and Scroll-Lock"
+msgstr ""
+
+#: prefs.js:29
+msgid "All"
 msgstr ""
 
 #: prefs.js:29

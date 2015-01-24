@@ -15,6 +15,7 @@ const MessageTray = imports.ui.messageTray;
 
 const Keymap = Gdk.Keymap.get_default();
 const Caribou = imports.gi.Caribou;
+const Mods = Gdk.ModifierType;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Meta = ExtensionUtils.getCurrentExtension();
@@ -24,7 +25,11 @@ const Utils = Meta.imports.utils;
 const STYLE = 'style';
 const STYLE_NUMLOCK = 'numlock';
 const STYLE_CAPSLOCK = 'capslock';
-const STYLE_BOTH = 'both';
+const STYLE_SCRLLOCK = 'scrolllock';
+const STYLE_NUMCAPS = 'numcaps';
+const STYLE_CAPSSCRL = 'capsscrl';
+const STYLE_NUMSCRL = 'numscrl';
+const STYLE_ALL = 'all';
 const STYLE_SHOWHIDE = 'show-hide';
 const NOTIFICATIONS = 'notifications';
 
@@ -68,11 +73,14 @@ LockKeysIndicator.prototype = {
 			style_class: 'system-status-icon'});
 		this.capsIcon = new St.Icon({icon_name: "capslock-enabled-symbolic",
 			style_class: 'system-status-icon'});
+		this.scrlIcon = new St.Icon({icon_name: "scrolllock-enabled-symbolic",
+			style_class: 'system-status-icon'});
 
 		this.layoutManager = new St.BoxLayout({vertical: false,
 			style_class: 'lockkeys-container'});
 		this.layoutManager.add(this.numIcon);
 		this.layoutManager.add(this.capsIcon);
+		this.layoutManager.add(this.scrlIcon);
 
 		this.actor.add_actor(this.layoutManager);
 
@@ -83,6 +91,10 @@ LockKeysIndicator.prototype = {
 		this.capsMenuItem = new PopupMenu.PopupSwitchMenuItem(_("Caps Lock"), false, { reactive: true });
 		this.capsMenuItem.connect('toggled', Lang.bind(this, this._handleCapslockMenuItem));
 		this.menu.addMenuItem(this.capsMenuItem);
+
+		this.scrlMenuItem = new PopupMenu.PopupSwitchMenuItem(_("Scroll Lock"), false, { reactive: true });
+		this.scrlMenuItem.connect('toggled', Lang.bind(this, this._handleScrolllockMenuItem));
+		this.menu.addMenuItem(this.scrlMenuItem);
 
 		this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 		this.settingsMenuItem = new PopupMenu.PopupMenuItem(_("Settings"));
@@ -142,6 +154,19 @@ LockKeysIndicator.prototype = {
 		}
 	},
 
+	_handleScrolllockMenuItem: function(actor, event) {
+		keyval = Gdk.keyval_from_name('Scroll_Lock');
+		//https://bugzilla.gnome.org/show_bug.cgi?id=705720
+		if (Caribou.XAdapter.get_default !== undefined) {
+			//caribou <= 0.4.11
+			Caribou.XAdapter.get_default().keyval_press(keyval);
+			Caribou.XAdapter.get_default().keyval_release(keyval);
+		} else { 
+			Caribou.DisplayAdapter.get_default().keyval_press(keyval);
+			Caribou.DisplayAdapter.get_default().keyval_release(keyval);
+		}
+	},
+
 	_handleStateChange: function(actor, event) {
 		if (this.numlock_state != this._getNumlockState()) {
 			let notification_text = _("Num Lock") + ' ' + this._getStateText(this._getNumlockState());
@@ -155,16 +180,24 @@ LockKeysIndicator.prototype = {
 				this._showNotification(notification_text, "capslock-enabled");
 			}
 		}
+		if (this.scrllock_state != this._getScrllockState()) {
+			let notification_text = _("Scroll Lock") + ' ' + this._getStateText(this._getScrllockState());
+			if (this.config.isShowNotifications() && this.config.isShowScrlLock()) {
+				this._showNotification(notification_text, "scrolllock-enabled");
+			}
+		}
 		this._updateState();
 	},
 
 	_updateState: function() {
 		this.numlock_state = this._getNumlockState();
 		this.capslock_state = this._getCapslockState();
+		this.scrllock_state = this._getScrllockState();
 
-		this.indicatorStyle.displayState(this.numlock_state, this.capslock_state);
+		this.indicatorStyle.displayState(this.numlock_state, this.capslock_state, this.scrllock_state);
 		this.numMenuItem.setToggleState(this.numlock_state);
 		this.capsMenuItem.setToggleState(this.capslock_state);
+		this.scrlMenuItem.setToggleState(this.scrllock_state);
 	},
 
 	_showNotification: function(notification_text, icon_name) {
@@ -209,6 +242,10 @@ LockKeysIndicator.prototype = {
 
 	_getCapslockState: function() {
 		return Keymap.get_caps_lock_state();
+	},
+
+	_getScrllockState: function() {
+		return (Keymap.get_modifier_state() & Mods.MOD3_MASK) != 0;
 	}
 }
 
@@ -222,6 +259,7 @@ HighlightIndicator.prototype = {
 		this.config = panelButton.config;
 		this.numIcon = panelButton.numIcon; 
 		this.capsIcon = panelButton.capsIcon;
+		this.scrlIcon = panelButton.scrlIcon;
 		
 		if (this.config.isShowNumLock())
 			this.numIcon.show();
@@ -232,9 +270,14 @@ HighlightIndicator.prototype = {
 			this.capsIcon.show();
 		else
 			this.capsIcon.hide();
+		
+		if (this.config.isShowScrlLock())
+			this.scrlIcon.show();
+		else
+			this.scrlIcon.hide();
 	},
 	
-	displayState: function(numlock_state, capslock_state) {
+	displayState: function(numlock_state, capslock_state, scrllock_state) {
 		this.panelButton.actor.visible = true;
 		
 		if (numlock_state)
@@ -246,6 +289,11 @@ HighlightIndicator.prototype = {
 			this.capsIcon.set_icon_name('capslock-enabled-symbolic');
 		else
 			this.capsIcon.set_icon_name('capslock-disabled-symbolic');
+
+		if (scrllock_state)
+			this.scrlIcon.set_icon_name('scrolllock-enabled-symbolic');
+		else
+			this.scrlIcon.set_icon_name('scrolllock-disabled-symbolic');
 
 	}
 }
@@ -260,13 +308,15 @@ ShowhideIndicator.prototype = {
 		this.config = panelButton.config;
 		this.numIcon = panelButton.numIcon; 
 		this.capsIcon = panelButton.capsIcon;
+		this.scrlIcon = panelButton.scrlIcon;
 		
 		this.numIcon.set_icon_name('numlock-enabled-symbolic');
 		this.capsIcon.set_icon_name('capslock-enabled-symbolic');
+		this.scrlIcon.set_icon_name('scrolllock-enabled-symbolic');
 	},
 	
-	displayState: function(numlock_state, capslock_state) {
-		this.panelButton.actor.visible = numlock_state || capslock_state;
+	displayState: function(numlock_state, capslock_state, scrllock_state) {
+		this.panelButton.actor.visible = numlock_state || capslock_state || scrllock_state;
 	
 		if (numlock_state)
 			this.numIcon.show();
@@ -277,6 +327,11 @@ ShowhideIndicator.prototype = {
 			this.capsIcon.show();
 		else
 			this.capsIcon.hide();
+
+		if (scrllock_state)
+			this.scrlIcon.show();
+		else
+			this.scrlIcon.hide();
 	}
 }
 
@@ -295,12 +350,17 @@ Configuration.prototype = {
 	
 	isShowNumLock: function() {
 		let widget_style = this.settings.get_string(STYLE);
-		return widget_style == STYLE_NUMLOCK || widget_style == STYLE_BOTH || widget_style == STYLE_SHOWHIDE; 
+		return widget_style == STYLE_NUMLOCK || widget_style == STYLE_NUMCAPS || widget_style == STYLE_NUMSCRL || widget_style == STYLE_ALL || widget_style == STYLE_SHOWHIDE;
 	},
 	
 	isShowCapsLock: function() {
 		let widget_style = this.settings.get_string(STYLE);
-		return widget_style == STYLE_CAPSLOCK || widget_style == STYLE_BOTH || widget_style == STYLE_SHOWHIDE; 
+		return widget_style == STYLE_CAPSLOCK || widget_style == STYLE_NUMCAPS || widget_style == STYLE_CAPSSCRL || widget_style == STYLE_ALL || widget_style == STYLE_SHOWHIDE;
+	},
+	
+	isShowScrlLock: function() {
+		let widget_style = this.settings.get_string(STYLE);
+		return widget_style == STYLE_SCRLLOCK || widget_style == STYLE_NUMSCRL || widget_style == STYLE_CAPSSCRL || widget_style == STYLE_ALL || widget_style == STYLE_SHOWHIDE;
 	},
 	
 	isShowHideStyle: function() {

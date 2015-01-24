@@ -11,8 +11,11 @@ const Utils = Meta.imports.utils;
 const STYLE = 'style';
 const STYLE_NUMLOCK = 'numlock';
 const STYLE_CAPSLOCK = 'capslock';
-const STYLE_BOTH = 'both';
-const STYLE_SHOWHIDE = 'show-hide';
+const STYLE_SCRLLOCK = 'scrolllock';
+const STYLE_NUMCAPS = 'numcaps';
+const STYLE_CAPSSCRL = 'capsscrl';
+const STYLE_NUMSCRL = 'numscrl';
+const STYLE_ALL = 'all';
 const NOTIFICATIONS = 'notifications';
 
 let settings;
@@ -28,7 +31,9 @@ function buildPrefsWidget() {
 	frame.set_spacing(10);
 	//can not use constants here like STYLE_NUMLOCK etc, don't know why
 	frame.add(_createComboBox(STYLE, _("Indicator Style"), _("Change indicator display options"),
-			{'numlock': _("Num-Lock Only"), 'capslock' : _("Caps-Lock Only"), 'both' : _("Both"), 'show-hide' : _("Show/Hide")}));
+			{'numlock': _("Num-Lock Only"), 'capslock' : _("Caps-Lock Only"), 'scrolllock' : _("Scroll-Lock Only"),
+			 'numcaps': _("Num-Lock and Caps-Lock"), 'capsscrl' : _("Caps-Lock and Scroll-Lock"), 'numscrl' : _("Num-Lock and Scroll-Lock"),
+			 'all' : _("All")}));
 	frame.add(_createCheckBox(NOTIFICATIONS, _("Notifications"), _("Show notifications when state changes")));
 	
 	frame.show_all();
