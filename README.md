@@ -4,7 +4,7 @@ It shows notifications about numlock, capslock or scrolllock state change.
 
 ![Screenshot](https://github.com/marzojr/gnome-shell-extension-lockkeys/raw/master/screenshot.png)
 
-Forked from [Link](https://github.com/kazysmaster/gnome-shell-extension-lockkeys)
+Forked from [here](https://github.com/kazysmaster/gnome-shell-extension-lockkeys)
 
 Translations generally outdated.
 
